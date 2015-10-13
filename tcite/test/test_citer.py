@@ -113,4 +113,12 @@ class Citer_indexToPointTest(TestCase):
         self.assertRaises(IndexError, citer.indexToPoint, 'foo', -100)
 
     def test_chinese(self):
-        self.fail('write me')
+        # from http://generator.lorem-ipsum.info/
+        text = u'''銈 焲犈 藙藨蠈 螏螉褩 雥齆犪, 灊灅 灊灅
+
+慛 臡虈觿 翍脝艴 螒螝,'''
+        self.assertPoint(text, 0, 'p0')
+        self.assertPoint(text, 1, u'p0{銈}e')
+        self.assertPoint(text, 13, u'p0{雥齆犪,}')
+        self.assertPoint(text, 21, u'p0{灊灅}1')
+        self.assertPoint(text, 27, u'p1{臡虈觿}')
