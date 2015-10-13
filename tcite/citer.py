@@ -1,8 +1,66 @@
 import re
+from parsley import makeGrammar
+
 r_newline = re.compile(r'[\n\r]+')
 
 word_delim = ' \t'
 para_delim = '\r\n'
+
+grammar_str = '''
+digit = anything:x ?(x in '0123456789') -> x
+number = <digit+>:ds -> int(''.join(ds))
+
+escapedChar = ('\\{' -> '{') | ('\\}' -> '}')
+pattern_string = (escapedChar | ~'}' anything)*:c -> ''.join(c)
+pattern = '{' pattern_string:c '}' number?:count -> (c, count)
+
+point = ('p' number)?:p pattern?:pat 'e'?:end
+    -> {
+        'p':p,
+        'pattern':pat,
+        'end': bool(end),
+    }
+'''
+grammar = makeGrammar(grammar_str, {})
+
+
+class Point(object):
+
+    def __init__(self, p=0, pattern='', pattern_count=0, end=False):
+        self.p = p or 0
+        self.pattern = pattern or ''
+        self.pattern_count = pattern_count or 0
+        self.end = end or False
+
+    def __unicode__(self):
+        parts = []
+        parts.append('p{}'.format(self.p))
+        if self.pattern:
+            pattern = self.pattern.replace('{', '\\{').replace('}', '\\}')
+            parts.append(u'{{{}}}'.format(pattern))
+        if self.pattern_count:
+            parts.append(str(self.pattern_count))
+        if self.end:
+            parts.append('e')
+        return ''.join(parts)
+
+    def __repr__(self):
+        return unicode(self)
+
+def splitws(s):
+    """
+    Trim whitespace from front an back of string and return a tuple
+    of leading ws, string, trailing ws.
+    """
+    length = len(s)
+    original = s
+    s = s.lstrip()
+    leading = original[:length-len(s)]
+    length = len(s)
+    s = s.rstrip()
+    trailing = original[-length-len(s):]
+    return leading, s, trailing
+
 
 class Citer(object):
 
@@ -12,10 +70,22 @@ class Citer(object):
         """
         return filter(None, [x.strip() for x in text.split()]) or ['']
 
-    def splitParagraphs(self, text):
-        lines = (x.strip() for x in text.replace('\r', '\n').split('\n'))
-        non_empty_lines = (x for x in lines if x)
-        return list(non_empty_lines)
+    def splitParagraphs(self, text, with_offsets=False):
+        lines = (x for x in text.replace('\r', '\n').split('\n'))
+        if with_offsets:
+            offset = 0
+            for line in lines:
+                leading, s, trailing = splitws(line)
+                offset += len(leading)
+                if s:
+                    yield s, offset
+                offset += len(trailing)
+                offset += 1 # for terminal \n
+        else:
+            for line in lines:
+                line = line.strip()
+                if line:
+                    yield line
 
     def indexToPoint(self, text, index):
         """
@@ -23,16 +93,17 @@ class Citer(object):
         """
         if abs(index) > len(text):
             raise IndexError(index, text)
+
         np = 0
         pattern = ''
-        end = False
         count = 0
+        end = False
 
         head = text[:index]
         tail = text[index:]
 
         # count the leading paragraphs
-        paragraphs = self.splitParagraphs(head)
+        paragraphs = list(self.splitParagraphs(head))
         
 
         if tail and tail[0] in para_delim:
@@ -70,47 +141,37 @@ class Citer(object):
                 count = rest.count(pattern)
                 end = True
 
-        parts = []
-        parts.append('p{}'.format(np))
-        if pattern:
-            pattern = pattern.replace('{', '\\{').replace('}', '\\}')
-            parts.append(u'{{{}}}'.format(pattern))
-        if count:
-            parts.append(str(count))
-        if end:
-            parts.append('e')
-
-        return ''.join(parts)
+        return Point(np, pattern, count, end)
 
     def pointToIndex(self, text, point):
         """
         Given a point in a string, return the index of that point.
         """
+        data = grammar(point).point()
+        pattern = ''
+        count = 0
+        if data['pattern']:
+            pattern = data['pattern'][0]
+            count = data['pattern'][1] or 0
+        parsed = Point(data['p'], pattern, count, data['end'])
 
 
-    def rangeFromText(self, text, sample):
-        """
-        Given a text and a sample from the text, produce a range citation.
-        """
-        index = text.index(sample)
-        pointer = index
+        paragraphs = list(self.splitParagraphs(text, with_offsets=True))
+        p, offset = paragraphs[parsed.p]
+        if parsed.pattern:
+            # pattern
+            index = offset
+            pattern_index = 0
+            for i in xrange(parsed.pattern_count):
+                pattern_index = p.index(parsed.pattern, pattern_index) + len(parsed.pattern)
+            index += p.index(parsed.pattern, pattern_index)
+            if parsed.end:
+                index += len(parsed.pattern)
+            return index
+        else:
+            # just paragraph
+            if parsed.end:
+                return offset + len(p)
+            else:
+                return offset
 
-        # start paragraph
-        paragraphs = self.splitParagraphs(text)
-        start_p = 0
-        for p in paragraphs:
-            if len(p) <= pointer:
-                pointer -= len(p)
-                start_p += 1
-
-        # start word
-        if pointer:
-            text_words = self.splitWords(p)
-
-        # Find end
-
-        end_w = len(sample.split()) - 1
-
-
-
-        return 'p{start_p}_+w{end_w}e'.format(**locals())
