@@ -17,6 +17,7 @@ A Point is a single place in the text in between characters.  The format is like
 
     [p<paragraph_num>][{<string>}[<match_num>]][e]
 
+Paragraphs are determined by collapsing all newlines, carriage returns and whitespace into a single newline, stripping whitespace from the beginning and end of the document, and then splitting on newlines.
 
 ## Ranges
 
@@ -55,8 +56,9 @@ The `*` in the *Example* indicates where the Point refers to
 |---|---|---|
 | `p0_p0e` | The whole first paragraph | "I am a sample text.  I am a very simple piece of text for sample purposes." |
 | `p0_{text.}e` | From the start up to and including "text." | "I am a sample text." |
-| `{sample}_{of}e` | From "sample" to "of" | "sample text.  I am a very simple piece of" |
-| `{sample}1_{of}e` | From the second "sample" to the next "of" | "sample purposes.  Don't think of" |
+| `{sample}_{of}e` | From "sample" through "of" | "sample text.  I am a very simple piece of" |
+| `{sample}_{of}` | From "sample" up to "of" | "sample text. I am a very simple piece " |
+| `{sample}1_{of}e` | From the second "sample" through the next "of" | "sample purposes.  Don't think of" |
 
 | Selection | Value |
 |---|---|

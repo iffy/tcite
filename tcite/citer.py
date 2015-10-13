@@ -1,13 +1,10 @@
-word_delim = set(' \t')
-para_delim = set('\r\n')
+import re
+r_newline = re.compile(r'[\n\r]+')
+
+word_delim = ' \t'
+para_delim = '\r\n'
 
 class Citer(object):
-
-    def splitParagraphs(self, text):
-        """
-        Split a text into a list of paragraphs.
-        """
-        return filter(None, [x.strip() for x in text.split('\n')]) or ['']
 
     def splitWords(self, text):
         """
@@ -15,57 +12,89 @@ class Citer(object):
         """
         return filter(None, [x.strip() for x in text.split()]) or ['']
 
+    def splitParagraphs(self, text):
+        lines = (x.strip() for x in text.replace('\r', '\n').split('\n'))
+        non_empty_lines = (x for x in lines if x)
+        return list(non_empty_lines)
+
     def indexToPoint(self, text, index):
         """
         Given an index in a string, return the point citation.
         """
+        print 'indexToPoint(%r, %r)' % (text, index)
         np = 0
-        nw = 0
-        nc = 0
+        pattern = ''
+        end = False
+        count = 0
 
-        head = text[:index] or ' '
-        if not head.strip():
-            # special case start of string
-            return 'p0'
+        head = text[:index]
+        tail = text[index:]
+        print 'head', repr(head)
+        print 'tail', repr(tail)
 
-        tail = text[index:] or ' '
-        word_boundary = head[-1] in word_delim or tail[0] in word_delim
-        para_boundary = head[-1] in para_delim or tail[0] in para_delim
-
-        # number of paragraphs
+        # count the leading paragraphs
         paragraphs = self.splitParagraphs(head)
-        if para_boundary:
+        print 'paragraphs', paragraphs
+        
+
+        if tail and tail[0] in para_delim:
+            # end of paragraph
+            print 'end of paragraph'
+            np = len(paragraphs) - 1
+            end = True
+        elif (head and head[-1] in para_delim) or not head.strip():
+            # start of paragraph
+            print 'start of paragraph'
             np = len(paragraphs)
         else:
-            np = len(paragraphs) - 1
+            # middle of paragraph
+            print 'middle of paragraph'
+            if paragraphs:
+                np = len(paragraphs) - 1
+            print 'head', repr(head)
+            print 'tail', repr(tail)
 
-            # words
-            head = paragraphs[-1]
-            words = self.splitWords(head)
-
-            if word_boundary:
-                nw = len(words)
+            start_of_word = True
+            if head:
+                start_of_word = head[-1] in word_delim
+            if not start_of_word:
+                print 'mid/end of word'
+                pattern = head.split()[-1]
+                rest = head[:-len(pattern)]
+                print 'looking in', repr(rest), 'for', repr(pattern)
+                count = rest.count(pattern)
+                end = True
             else:
-                nw = len(words) - 1
-                nc = len(words[-1])
+                print 'start of word'
+                pattern = tail.split()[0]
+                count = head.count(pattern)
+
+        # if head[0] in word_delim:
+        #     # start of word in tail
+        #     print 'start of word in tail'
+        #     pattern = tail.split()[0]
+        # elif tail[0] in word_delim:
+        #     # end of word in head
+        #     print 'end of word in head'
+        #     pattern = head.split()[-1]
+
 
         parts = []
-        if np:
-            parts.append('p{}'.format(np))
-        if nw:
-            parts.append('w{}'.format(nw))
-        if nc:
-            parts.append('c{}'.format(nc))
+        parts.append('p{}'.format(np))
+        if pattern:
+            parts.append('{{{}}}'.format(pattern))
+        if count:
+            parts.append(str(count))
+        if end:
+            parts.append('e')
 
-        if not parts:
-            parts = ['p0']
         return ''.join(parts)
 
     def pointToIndex(self, text, point):
         """
         Given a point in a string, return the index of that point.
         """
-        
+
 
     def rangeFromText(self, text, sample):
         """
