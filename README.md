@@ -11,8 +11,11 @@ The format is made of the following:
 To describe those, refer to this sample text:
 
 > I am a sample text.  I am a very simple piece of text for sample purposes.
+>
 > Don't think of me as something more than just a sample.
+>
 > I'm not one of those "meaningful" bits of text.
+
 
 ## Points
 
@@ -62,11 +65,11 @@ Suppose we had this original text:
 
 And we wanted to misquote the following from it:
 
-> I am ... not ... the only one ... with ... brains.
+> I am ... the only one ... with ... brains.
 
 We could express that with the following selection:
 
-`p0_+w1e,w5_+w0e,w9_+w2e,w13_+w0e,w16_+w0e`
+`p0_+w1e,w9_+w2e,w13_+w0e,w16_+w0e`
 
 If we only wanted to quote this:
 
