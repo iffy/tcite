@@ -21,11 +21,18 @@ class CiterTest(TestCase):
 
         if reverse:
             # assert the reverse
-            inverse = citer.pointToIndex(text, point)
-            self.assertEqual(inverse, index,
-                u"Expected point {point} to"
-                u" be converted to index {index} but it was {inverse}"
-                u"\n\n{text!r}".format(**locals()).encode('utf-8'))
+            self.assertIndex(text, point, index)
+
+    def assertIndex(self, text, point, expected_index):
+        """
+        Assert that the given point resolves to the expected_index.
+        """
+        citer = Citer()
+        actual = citer.pointToIndex(text, point)
+        self.assertEqual(actual, expected_index,
+            u"Expected point {point} to"
+            u" be converted to index {expected_index} but it was {actual}"
+            u"\n\n{text!r}".format(**locals()).encode('utf-8'))
 
     def test_start_with_whitespace(self):
         self.assertPoint('\n\n\nfoo bar baz\n\n', 0, 'p0', reverse=False)
@@ -124,4 +131,13 @@ class CiterTest(TestCase):
         self.assertPoint(text, 13, u'p0{雥齆犪,}')
         self.assertPoint(text, 21, u'p0{灊灅}1')
         self.assertPoint(text, 27, u'p1{臡虈觿}')
+
+    def test_noParagraph(self):
+        """
+        Points with no paragraph specified look over the whole document.
+        """
+        self.assertIndex('foo bar', '{bar}', 4)
+        self.assertIndex('foo\nbar\nbaz', '{baz}', 8)
+        self.assertIndex('foo\nfoo\nfoo', '{foo}1e', 7)
+
 

@@ -26,8 +26,8 @@ grammar = makeGrammar(grammar_str, {})
 
 class Point(object):
 
-    def __init__(self, p=0, pattern='', pattern_count=0, end=False):
-        self.p = p or 0
+    def __init__(self, p=None, pattern='', pattern_count=0, end=False):
+        self.p = p
         self.pattern = pattern or ''
         self.pattern_count = pattern_count or 0
         self.end = end or False
@@ -155,9 +155,13 @@ class Citer(object):
             count = data['pattern'][1] or 0
         parsed = Point(data['p'], pattern, count, data['end'])
 
-
-        paragraphs = list(self.splitParagraphs(text, with_offsets=True))
-        p, offset = paragraphs[parsed.p]
+        p = text
+        offset = 0
+        if parsed.p is not None:
+            # has paragraph designation
+            paragraphs = list(self.splitParagraphs(text, with_offsets=True))
+            p, offset = paragraphs[parsed.p]
+        
         if parsed.pattern:
             # pattern
             index = offset
