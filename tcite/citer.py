@@ -58,29 +58,30 @@ class Citer(object):
             print 'tail', repr(tail)
 
             start_of_word = True
+            end_of_word = False
             if head:
                 start_of_word = head[-1] in word_delim
-            if not start_of_word:
+            if tail:
+                end_of_word = tail[0] in word_delim
+
+            if start_of_word and end_of_word:
+                print 'middle of whitespace'
+                stripped_head = head.rstrip()
+                ws_part = head[len(stripped_head):]
+                nonws_part = stripped_head.split()[-1]
+                pattern = nonws_part + ws_part
+                end = True
+            elif start_of_word:
+                print 'start of word'
+                pattern = tail.split()[0]
+                count = head.count(pattern)
+            else:
                 print 'mid/end of word'
                 pattern = head.split()[-1]
                 rest = head[:-len(pattern)]
                 print 'looking in', repr(rest), 'for', repr(pattern)
                 count = rest.count(pattern)
                 end = True
-            else:
-                print 'start of word'
-                pattern = tail.split()[0]
-                count = head.count(pattern)
-
-        # if head[0] in word_delim:
-        #     # start of word in tail
-        #     print 'start of word in tail'
-        #     pattern = tail.split()[0]
-        # elif tail[0] in word_delim:
-        #     # end of word in head
-        #     print 'end of word in head'
-        #     pattern = head.split()[-1]
-
 
         parts = []
         parts.append('p{}'.format(np))
