@@ -12,6 +12,9 @@ setup(
     author='Matt Haggard',
     author_email='haggardii@gmail.com',
     url='https://github.com/iffy/tcite',
+    install_requires=[
+        'parsley',
+    ],
     packages=[
         'tcite', 'tcite.test',
     ],
