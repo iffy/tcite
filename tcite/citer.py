@@ -34,10 +34,10 @@ class Point(object):
 
     def __unicode__(self):
         parts = []
-        parts.append('p{}'.format(self.p))
+        parts.append('p{0}'.format(self.p))
         if self.pattern:
             pattern = self.pattern.replace('{', '\\{').replace('}', '\\}')
-            parts.append(u'{{{}}}'.format(pattern))
+            parts.append(u'{{{0}}}'.format(pattern))
         if self.pattern_count:
             parts.append(str(self.pattern_count))
         if self.end:
