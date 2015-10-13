@@ -22,6 +22,8 @@ class Citer(object):
         Given an index in a string, return the point citation.
         """
         print 'indexToPoint(%r, %r)' % (text, index)
+        if abs(index) > len(text):
+            raise IndexError(index, text)
         np = 0
         pattern = ''
         end = False
@@ -40,8 +42,9 @@ class Citer(object):
         if tail and tail[0] in para_delim:
             # end of paragraph
             print 'end of paragraph'
-            np = len(paragraphs) - 1
-            end = True
+            if paragraphs:
+                np = len(paragraphs) - 1
+                end = True
         elif (head and head[-1] in para_delim) or not head.strip():
             # start of paragraph
             print 'start of paragraph'
@@ -82,7 +85,7 @@ class Citer(object):
         parts = []
         parts.append('p{}'.format(np))
         if pattern:
-            parts.append('{{{}}}'.format(pattern))
+            parts.append(u'{{{}}}'.format(pattern))
         if count:
             parts.append(str(count))
         if end:

@@ -22,12 +22,15 @@ class Citer_indexToPointTest(TestCase):
         citer = Citer()
         actual = citer.indexToPoint(text, index)
         self.assertEqual(expected, actual,
-            "Expected index {index} to"
-            " be at point {expected} but it was {actual}"
-            "\n\n{text!r}".format(**locals()))
+            u"Expected index {index} to"
+            u" be at point {expected} but it was {actual}"
+            u"\n\n{text!r}".format(**locals()).encode('utf-8'))
 
     def test_start_with_whitespace(self):
         self.assertPoint('\n\n\nfoo bar baz\n\n', 0, 'p0')
+        self.assertPoint('\n\n\nfoo bar baz\n\n', 1, 'p0')
+        self.assertPoint('\n\n\nfoo bar baz\n\n', 2, 'p0')
+        self.assertPoint('\n\n\nfoo bar baz\n\n', 3, 'p0')
 
     def test_start_no_whitespace(self):
         self.assertPoint('foo bar baz', 0, 'p0')
@@ -57,19 +60,37 @@ class Citer_indexToPointTest(TestCase):
         self.assertPoint('alligator and friends', 9, 'p0{alligator}e')
         self.assertPoint('alligator and friends', 13, 'p0{and}e')
 
-    def test_unicode_middle_of_word(self):
-        self.fail('write me')
+    def test_unicode(self):
+        self.assertPoint(u'nēssa/nētta (νῆσσα, νῆττα)', 0, u'p0')
+        self.assertPoint(u'nēssa/nētta (νῆσσα, νῆττα)', 11,
+            u'p0{nēssa/nētta}e')
+        self.assertPoint(u'nēssa/nētta (νῆσσα, νῆττα)', 12,
+            u'p0{(νῆσσα,}')
 
-    def test_unicode_end_of_word(self):
-        self.fail('write me')
+    def test_curly(self):
+        self.assertPoint('foo {foo} foo', 4, 'p{\\{foo\\}}')
+        self.assertPoint('foo {foo foo', 4, 'p{\\{foo}')
+        self.assertPoint('foo foo} foo', 4, 'p{foo\\}}')
+        self.assertPoint('foo { foo', 4, 'p{\\{}')
+        self.assertPoint('foo } foo', 4, 'p{\\}}')
 
-    def test_unicode_start_of_word(self):
-        self.fail('write me')
+    def test_middleOfWhitespace(self):
+        self.assertPoint('foo   foo ', 4, 'p{foo }e')
+        self.assertPoint('foo   foo ', 5, 'p{foo  }e')
+        self.assertPoint('foo  \t \t foo ', 0, 'p0')
+        self.assertPoint('foo  \t \t foo ', 1, 'p{f}e')
+        self.assertPoint('foo  \t \t foo ', 2, 'p{fo}e')
+        self.assertPoint('foo  \t \t foo ', 3, 'p{foo}e')
+        self.assertPoint('foo  \t \t foo ', 4, 'p{foo }e')
+        self.assertPoint('foo  \t \t foo ', 5, 'p{foo  }e')
+        self.assertPoint('foo  \t \t foo ', 6, 'p{foo  \t}e')
+        self.assertPoint('foo  \t \t foo ', 7, 'p{foo  \t }e')
+        self.assertPoint('foo  \t \t foo ', 8, 'p{foo  \t \t}e')
+        self.assertPoint('foo  \t \t foo ', 9, 'p{foo}1')
 
     def test_end_of_last_paragraph(self):
         self.assertPoint('foo\nbar\nbaz\n\n', 11, 'p2e')
         self.assertPoint('foo\nbar\nbaz\n\n', 12, 'p2e')
-        self.assertPoint('foo\nbar\nbaz\n\n', 10, 'p2{baz}e')
 
     def test_second_occurrence(self):
         self.assertPoint('foo foo foo foo', 0, 'p0')
@@ -82,10 +103,13 @@ class Citer_indexToPointTest(TestCase):
         self.assertPoint('foo foo foo foo', 15, 'p0{foo}3e')
 
     def test_negative(self):
-        self.assertPoint('foo\nbar\nbaz\n\n', -1, 'p0')
+        self.assertPoint('foo\nbar\nbaz\n\n', -1, 'p2e')
+        self.assertPoint('foo\nbar\nbaz\n\n', -3, 'p2{ba}1e')
 
-    def test_beyondend(self):
-        self.assertPoint('foo\nbar\nbaz\n\n', 400, 'p2e')
+    def test_beyond(self):
+        citer = Citer()
+        self.assertRaises(IndexError, citer.indexToPoint, 'foo', 400)
+        self.assertRaises(IndexError, citer.indexToPoint, 'foo', -100)
 
     def test_chinese(self):
         self.fail('write me')
