@@ -79,3 +79,7 @@ That would be expressed with the following selection:
 
 `p0_+w3e`
 
+
+# World Languages
+
+Many people use languages that aren't composed of characters and words in the same way that English is.  This can handle that as long as the encoding of the text is known.  (XXX perhaps this is an ignorant statement :)
