@@ -5,7 +5,7 @@ from twisted.trial.unittest import TestCase
 from tcite.citer import Citer
 
 
-class CiterTest(TestCase):
+class CiterPointTest(TestCase):
 
     def assertPoint(self, text, index, point, reverse=True):
         """
@@ -141,3 +141,46 @@ class CiterTest(TestCase):
         self.assertIndex('foo\n\nfoo\n\nfoo', '{foo}1e', 8)
 
 
+class CiterRangeTest(TestCase):
+
+    def assertRangeToIndex(self, text, trange, expected_index):
+        citer = Citer()
+        actual = citer.rangeToIndex(text, trange)
+        self.assertEqual(expected_index, actual,
+            "Expected range {trange} to be index"
+            " {expected_index} but it was actually {actual}"
+            "\n\n{text!r}".format(**locals()))
+
+    def assertIndexToRange(self, text, index, expected_range):
+        citer = Citer()
+        actual = citer.indexToRange(text, index)
+        self.assertEqual(expected_range, actual,
+            "Expected index {index} to be range"
+            " {expected_range} but it was actually {actual}"
+            "\n\n{text!r}".format(**locals()))        
+
+    def test_basic(self):
+        self.assertRangeToIndex('foo bar', '{foo}_{bar}e', (0, 7))
+        self.assertRangeToIndex('foo bar', '{foo}e_{bar}e', (3, 7))
+
+    def test_relativeToStart(self):
+        self.assertRangeToIndex('dog foo dog', '{foo}_{dog}e', (4, 11))
+        self.assertRangeToIndex('dog foo dog dog', '{foo}_{dog}1e', (4, 15))
+
+    def test_absoluteParagraph(self):
+        self.assertRangeToIndex('dog foo\n\ndog\n\ndog', '{foo}_p2{dog}e', (4, 17))
+        self.assertRangeToIndex('dog foo\n\ndog\n\ndog', '{foo}_p2e', (4, 17))
+
+    def test_spanParagraphs(self):
+        self.assertRangeToIndex('a\n\nb\n\nc', '{a}_{c}e', (0, 7))
+
+    def test_paragraph(self):
+        self.assertRangeToIndex('a\n\nb\n\nc', 'p0_p2e', (0, 7))
+        self.assertRangeToIndex('a\n\nb\n\nc', 'p1_p2e', (3, 7))
+
+        self.assertIndexToRange('a\n\nb\n\nc', (0, 7), 'p0_p2e')
+        self.assertIndexToRange('a\n\nb\n\nc', (3, 7), 'p1_p2e')
+
+    def test_indexToRange_pattern(self):
+        self.assertIndexToRange('a b c\n\nd e f', (2, 3), 'p0{b}_p0{b}e')
+        self.assertIndexToRange('a b c\n\nd e f', (2, 9), 'p0{b}_p1{e}')

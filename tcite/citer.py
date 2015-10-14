@@ -15,13 +15,21 @@ pattern_string = (escapedChar | ~'}' anything)*:c -> ''.join(c)
 pattern = '{' pattern_string:c '}' number?:count -> (c, count)
 
 point = ('p' number)?:p pattern?:pat 'e'?:end
-    -> {
-        'p':p,
-        'pattern':pat,
-        'end': bool(end),
-    }
+    -> Point(p, pat, end)
+
+range = point:a '_' point:b -> (a, b)
 '''
-grammar = makeGrammar(grammar_str, {})
+def _pointMaker(p, pat, end):
+    pattern = ''
+    count = 0
+    if pat:
+        pattern = pat[0]
+        count = pat[1] or 0
+    return Point(p, pattern, count, bool(end))
+
+grammar = makeGrammar(grammar_str, {
+    'Point': _pointMaker,
+})
 
 
 class Point(object):
@@ -32,9 +40,16 @@ class Point(object):
         self.pattern_count = pattern_count or 0
         self.end = end or False
 
+    def isRelative(self):
+        """
+        Can this point be considered relative?
+        """
+        return self.p is None
+
     def __unicode__(self):
         parts = []
-        parts.append('p{0}'.format(self.p))
+        if self.p is not None:
+            parts.append('p{0}'.format(self.p))
         if self.pattern:
             pattern = self.pattern.replace('{', '\\{').replace('}', '\\}')
             parts.append(u'{{{0}}}'.format(pattern))
@@ -169,35 +184,57 @@ class Citer(object):
         """
         Given a point in a string, return the index of that point.
         """
-        data = grammar(point).point()
-        pattern = ''
-        count = 0
-        if data['pattern']:
-            pattern = data['pattern'][0]
-            count = data['pattern'][1] or 0
-        parsed = Point(data['p'], pattern, count, data['end'])
+        if isinstance(point, (str, unicode)):
+            point = grammar(point).point()
+        return self._pointObjectToIndex(text, point)
 
+
+    def _pointObjectToIndex(self, text, point):
         p = text
         offset = 0
-        if parsed.p is not None:
+        if point.p is not None:
             # has paragraph designation
             paragraphs = list(self.splitParagraphs(text))
-            p, offset = paragraphs[parsed.p]
+            p, offset = paragraphs[point.p]
         
-        if parsed.pattern:
+        if point.pattern:
             # pattern
             index = offset
             pattern_index = 0
-            for i in xrange(parsed.pattern_count):
-                pattern_index = p.index(parsed.pattern, pattern_index) + len(parsed.pattern)
-            index += p.index(parsed.pattern, pattern_index)
-            if parsed.end:
-                index += len(parsed.pattern)
+            for i in xrange(point.pattern_count):
+                pattern_index = p.index(point.pattern, pattern_index) + len(point.pattern)
+            index += p.index(point.pattern, pattern_index)
+            if point.end:
+                index += len(point.pattern)
             return index
         else:
             # just paragraph
-            if parsed.end:
+            if point.end:
                 return offset + len(p)
             else:
                 return offset
+
+
+    def rangeToIndex(self, text, trange):
+        """
+        Convert a range string to a range index tuple.
+        """
+        data = grammar(trange).range()
+        start = self._pointObjectToIndex(text, data[0])
+        end = None
+        if data[1].isRelative():
+            end = self._pointObjectToIndex(text[start:], data[1]) + start
+        else:
+            end = self._pointObjectToIndex(text, data[1])
+        return (start, end)
+
+
+    def indexToRange(self, text, index):
+        """
+        Convert a range index tuple to a range string.
+        """
+        start = self.indexToPoint(text, index[0])
+        end = self.indexToPoint(text, index[1])
+        return u'{start}_{end}'.format(**locals())
+
 
