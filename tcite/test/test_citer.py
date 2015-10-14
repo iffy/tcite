@@ -23,14 +23,14 @@ class CiterTest(TestCase):
             # assert the reverse
             self.assertIndex(text, point, index)
 
-    def assertIndex(self, text, point, expected_index):
+    def assertIndex(self, text, point, expected_index, end_default=False):
         """
         Assert that the given point resolves to the expected_index.
         """
         citer = Citer()
-        actual = citer.pointToIndex(text, point)
+        actual = citer.pointToIndex(text, point, end_default=end_default)
         self.assertEqual(actual, expected_index,
-            u"Expected point {point} to"
+            u"Expected point {point} (end_default: {end_default}) to"
             u" be converted to index {expected_index} but it was {actual}"
             u"\n\n{text!r}".format(**locals()).encode('utf-8'))
 
@@ -139,5 +139,22 @@ class CiterTest(TestCase):
         self.assertIndex('foo bar', '{bar}', 4)
         self.assertIndex('foo\n\nbar\n\nbaz', '{baz}', 10)
         self.assertIndex('foo\n\nfoo\n\nfoo', '{foo}1e', 8)
+
+    def test_end_default_True(self):
+        """
+        If you set end_default to True, it defaults to the end of things,
+        which can be overridden with `s`
+        """
+        self.assertIndex('foo bar', '{foo}', 3, end_default=True)
+        self.assertIndex('foo bar', '{foo}s', 0, end_default=True)
+        self.assertIndex('foo bar', 'p0', 7, end_default=True)
+        self.assertIndex('foo bar', 'p0s', 0, end_default=True)
+        self.assertIndex('foo\n\nbar', 'p1', 8, end_default=True)
+        self.assertIndex('foo\n\nbar', 'p1s', 5, end_default=True)
+        self.assertIndex('foo foo', '{foo}1', 7, end_default=True)
+        self.assertIndex('foo foo', '{foo}1s', 4, end_default=True)
+        self.assertIndex('a c\n\nb c', 'p1{c}', 8, end_default=True)
+        self.assertIndex('a c\n\nb c', 'p1{c}s', 7, end_default=True)
+
 
 

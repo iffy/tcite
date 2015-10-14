@@ -15,13 +15,13 @@ The format is made of the following:
 
 A Point is a single place in the text in between characters.  The format is like this:
 
-    [p<paragraph_num>][{<string>}[<match_num>]][e]
+    [p<paragraph_num>][{<string>}[<match_num>]][e|s]
 
 Paragraphs breaks are two or more sequential lines of whitespace.  Leading and trailing whitespace in the document is discarded.
 
 ## Ranges
 
-A range is two points separated by `_`.  The second point will be relative to the first point if no paragraph is included.
+A range is two points separated by `_`.  The second point will be relative to the first point if no paragraph is included.  The second point defaults to the *end* of whatever is selected.  You can select the *start* by ending with `s`.
 
 
 ## Selections
@@ -54,12 +54,12 @@ The `*` in the *Example* indicates where the Point refers to
 
 | Range | Meaning | Value |
 |---|---|---|
-| `p0_p0e` | The whole first paragraph | "I am a sample text.  I am a very simple piece of text for sample purposes." |
-| `p0_{text.}e` | From the start up to and including "text." | "I am a sample text." |
-| `{sample}_{of}e` | From "sample" through "of" | "sample text.  I am a very simple piece of" |
-| `{sample}_{of}` | From "sample" up to "of" | "sample text. I am a very simple piece " |
-| `{sample}1_{of}e` | From the second "sample" through the next "of" | "sample purposes.  Don't think of" |
+| `p0_p0` | The whole first paragraph | "I am a sample text.  I am a very simple piece of text for sample purposes." |
+| `p0_{text.}` | From the start up to and including "text." | "I am a sample text." |
+| `{sample}_{of}` | From "sample" through "of" | "sample text.  I am a very simple piece of" |
+| `{sample}_{of}s` | From "sample" up to the start of "of" | "sample text. I am a very simple piece " |
+| `{sample}1_{of}` | From the second "sample" through the next "of" | "sample purposes.  Don't think of" |
 
 | Selection | Value |
 |---|---|
-| `p2_{not}e,p2{bits}_{text.}e` | "I'm not", "bits of text" |
+| `p2_{not},p2{bits}_{text.}` | "I'm not", "bits of text" |

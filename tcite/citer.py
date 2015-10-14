@@ -14,11 +14,11 @@ escapedChar = ('\\{' -> '{') | ('\\}' -> '}')
 pattern_string = (escapedChar | ~'}' anything)*:c -> ''.join(c)
 pattern = '{' pattern_string:c '}' number?:count -> (c, count)
 
-point = ('p' number)?:p pattern?:pat 'e'?:end
+point = ('p' number)?:p pattern?:pat ('e'|'s')?:end
     -> {
-        'p':p,
-        'pattern':pat,
-        'end': bool(end),
+        'p': p,
+        'pattern': pat,
+        'end': end,
     }
 '''
 grammar = makeGrammar(grammar_str, {})
@@ -34,7 +34,8 @@ class Point(object):
 
     def __unicode__(self):
         parts = []
-        parts.append('p{0}'.format(self.p))
+        if self.p is not None:
+            parts.append('p{0}'.format(self.p))
         if self.pattern:
             pattern = self.pattern.replace('{', '\\{').replace('}', '\\}')
             parts.append(u'{{{0}}}'.format(pattern))
@@ -45,7 +46,7 @@ class Point(object):
         return ''.join(parts)
 
     def __repr__(self):
-        return unicode(self)
+        return unicode(self).encode('utf-8')
 
 def splitws(s):
     """
@@ -165,9 +166,13 @@ class Citer(object):
         return Point(np, pattern, count, end)
 
 
-    def pointToIndex(self, text, point):
+    def pointToIndex(self, text, point, end_default=False):
         """
         Given a point in a string, return the index of that point.
+
+        @param point: A string representation of a Point.
+        @param end_default: If C{True} then default to the end of the
+            point unless there's a `s` at the end.
         """
         data = grammar(point).point()
         pattern = ''
@@ -175,7 +180,13 @@ class Citer(object):
         if data['pattern']:
             pattern = data['pattern'][0]
             count = data['pattern'][1] or 0
-        parsed = Point(data['p'], pattern, count, data['end'])
+
+        end = end_default
+        if data['end'] == 's':
+            end = False
+        elif data['end'] == 'e':
+            end = True
+        parsed = Point(data['p'], pattern, count, end)
 
         p = text
         offset = 0
