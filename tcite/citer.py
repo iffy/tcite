@@ -26,11 +26,21 @@ grammar = makeGrammar(grammar_str, {})
 
 class Point(object):
 
-    def __init__(self, p=None, pattern='', pattern_count=0, end=False):
+    def __init__(self, p=None, pattern='', pattern_count=0, end=None,
+            end_default=False):
         self.p = p
         self.pattern = pattern or ''
         self.pattern_count = pattern_count or 0
-        self.end = end or False
+        if end is None:
+            self.end = end_default
+        elif end == 'e':
+            self.end = True
+        else:
+            self.end = False
+        self.end_default = end_default
+        print 'end', self.end
+        print 'end_default', self.end_default
+
 
     def __unicode__(self):
         parts = []
@@ -41,8 +51,10 @@ class Point(object):
             parts.append(u'{{{0}}}'.format(pattern))
         if self.pattern_count:
             parts.append(str(self.pattern_count))
-        if self.end:
+        if self.end and not self.end_default:
             parts.append('e')
+        elif not self.end and self.end_default:
+            parts.append('s')
         return ''.join(parts)
 
     def __repr__(self):
@@ -84,9 +96,12 @@ class Citer(object):
             offset += len(chunk)
 
 
-    def indexToPoint(self, text, index):
+    def indexToPoint(self, text, index, end_default=False):
         """
         Given an index in a string, return the point citation.
+
+        @param end_default: If C{True} then `s` will be explicity set
+            rather than `e` on returned Points.
         """
         if abs(index) > len(text):
             raise IndexError(index, text)
@@ -97,7 +112,7 @@ class Citer(object):
         np = 0
         pattern = ''
         count = 0
-        end = False
+        end = 's'
 
         i = 0
         last_np = 0
@@ -125,7 +140,7 @@ class Citer(object):
 
         if index >= (offset + len(p)):
             # end of paragraph
-            end = True
+            end = 'e'
         elif index < offset:
             # start of paragraph
             pass
@@ -153,7 +168,7 @@ class Citer(object):
                     ws_part = head[len(stripped_head):]
                     nonws_part = stripped_head.split()[-1]
                     pattern = nonws_part + ws_part
-                    end = True
+                    end = 'e'
                 elif start_of_word:
                     pattern = tail.split()[0]
                     count = head.count(pattern)
@@ -161,9 +176,9 @@ class Citer(object):
                     pattern = head.split()[-1]
                     rest = head[:-len(pattern)]
                     count = rest.count(pattern)
-                    end = True
+                    end = 'e'
         
-        return Point(np, pattern, count, end)
+        return Point(np, pattern, count, end, end_default=end_default)
 
 
     def pointToIndex(self, text, point, end_default=False):
@@ -174,6 +189,7 @@ class Citer(object):
         @param end_default: If C{True} then default to the end of the
             point unless there's a `s` at the end.
         """
+        print 'pointToIndex(%r, %r, %r)' % (text, point, end_default)
         data = grammar(point).point()
         pattern = ''
         count = 0
@@ -181,12 +197,11 @@ class Citer(object):
             pattern = data['pattern'][0]
             count = data['pattern'][1] or 0
 
-        end = end_default
-        if data['end'] == 's':
-            end = False
-        elif data['end'] == 'e':
-            end = True
-        parsed = Point(data['p'], pattern, count, end)
+        print 'data', data
+        parsed = Point(data['p'], pattern, count, data['end'],
+                       end_default)
+        print 'point', repr(point)
+        print 'parsed', parsed
 
         p = text
         offset = 0

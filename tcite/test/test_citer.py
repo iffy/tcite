@@ -5,23 +5,24 @@ from twisted.trial.unittest import TestCase
 from tcite.citer import Citer
 
 
-class CiterTest(TestCase):
+class CiterPointTest(TestCase):
 
-    def assertPoint(self, text, index, point, reverse=True):
+    def assertPoint(self, text, index, point, end_default=False,
+            reverse=True):
         """
         Assert that the given index within the given text produces the
         expected point
         """
         citer = Citer()
-        actual = citer.indexToPoint(text, index)
+        actual = citer.indexToPoint(text, index, end_default=end_default)
         self.assertEqual(point, unicode(actual),
-            u"Expected index {index} to"
+            u"Expected index {index} (end_default: {end_default}) to"
             u" be at point {point} but it was {actual}"
             u"\n\n{text!r}".format(**locals()).encode('utf-8'))
 
         if reverse:
             # assert the reverse
-            self.assertIndex(text, point, index)
+            self.assertIndex(text, point, index, end_default=end_default)
 
     def assertIndex(self, text, point, expected_index, end_default=False):
         """
@@ -140,7 +141,7 @@ class CiterTest(TestCase):
         self.assertIndex('foo\n\nbar\n\nbaz', '{baz}', 10)
         self.assertIndex('foo\n\nfoo\n\nfoo', '{foo}1e', 8)
 
-    def test_end_default_True(self):
+    def test_pointToIndex_end_default_True(self):
         """
         If you set end_default to True, it defaults to the end of things,
         which can be overridden with `s`
@@ -156,5 +157,49 @@ class CiterTest(TestCase):
         self.assertIndex('a c\n\nb c', 'p1{c}', 8, end_default=True)
         self.assertIndex('a c\n\nb c', 'p1{c}s', 7, end_default=True)
 
+    def test_indexToPoint_end_default_True(self):
+        """
+        If you set end_default to True, then s will be explicit and e
+        will be implicit.
+        """
+        self.assertPoint('foo bar', 3, 'p0{foo}', end_default=True)
+        self.assertPoint('foo bar', 7, 'p0', end_default=True)
+        self.assertPoint('foo bar', 0, 'p0s', end_default=True)
+        self.assertPoint('foo\n\nbar', 8, 'p1', end_default=True)
+        self.assertPoint('foo\n\nbar', 5, 'p1s', end_default=True)
+        self.assertPoint('foo foo', 7, 'p0{foo}1', end_default=True)
+        self.assertPoint('foo foo', 4, 'p0{foo}1s', end_default=True)
+        self.assertPoint('a c\n\nb c', 8, 'p1{c}', end_default=True)
+        self.assertPoint('a c\n\nb c', 7, 'p1{c}s', end_default=True)
 
+
+
+class CiterRangeTest(TestCase):
+
+    def assertRange(self, text, index, point, reverse=True):
+        """
+        Assert that the given index within the given text produces the
+        expected point
+        """
+        citer = Citer()
+        actual = citer.indexToPoint(text, index)
+        self.assertEqual(point, unicode(actual),
+            u"Expected index {index} to"
+            u" be at point {point} but it was {actual}"
+            u"\n\n{text!r}".format(**locals()).encode('utf-8'))
+
+        if reverse:
+            # assert the reverse
+            self.assertIndex(text, point, index)
+
+    def assertIndex(self, text, point, expected_index, end_default=False):
+        """
+        Assert that the given point resolves to the expected_index.
+        """
+        citer = Citer()
+        actual = citer.pointToIndex(text, point, end_default=end_default)
+        self.assertEqual(actual, expected_index,
+            u"Expected point {point} (end_default: {end_default}) to"
+            u" be converted to index {expected_index} but it was {actual}"
+            u"\n\n{text!r}".format(**locals()).encode('utf-8'))
 
