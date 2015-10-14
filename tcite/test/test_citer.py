@@ -44,8 +44,8 @@ class CiterTest(TestCase):
         self.assertPoint('foo bar baz', 0, 'p0')
 
     def test_second_paragraph(self):
-        self.assertPoint('\n\nfoo\nbar', 6, 'p1')
-        self.assertPoint('foo\nbar', 4, 'p1')
+        self.assertPoint('\n\nfoo\nbar', 6, 'p0{bar}')
+        self.assertPoint('foo\nbar', 4, 'p0{bar}')
         self.assertPoint('\n\nfoo\n\n\nbar', 8, 'p1')
         self.assertPoint('\n\nfoo\n\n\nbar', 5, 'p0e')
         self.assertPoint('\n\nfoo\n\n\nbar', 7, 'p0e', reverse=False)
@@ -99,8 +99,8 @@ class CiterTest(TestCase):
         self.assertPoint('a b   c   d e', 4, 'p0{b }e')
 
     def test_end_of_last_paragraph(self):
-        self.assertPoint('foo\nbar\nbaz\n\n', 11, 'p2e')
-        self.assertPoint('foo\nbar\nbaz\n\n', 12, 'p2e', reverse=False)
+        self.assertPoint('foo\n\nbar\n\nbaz\n\n', 13, 'p2e')
+        self.assertPoint('foo\n\nbar\n\nbaz\n\n', 14, 'p2e', reverse=False)
 
     def test_second_occurrence(self):
         self.assertPoint('foo foo foo foo', 0, 'p0')
@@ -110,11 +110,11 @@ class CiterTest(TestCase):
         self.assertPoint('foo foo foo foo', 8, 'p0{foo}2')
         self.assertPoint('foo foo foo foo', 11, 'p0{foo}2e')
         self.assertPoint('foo foo foo foo', 12, 'p0{foo}3')
-        self.assertPoint('foo foo foo foo', 15, 'p0{foo}3e')
+        self.assertPoint('foo foo foo foo', 15, 'p0e')
 
     def test_negative(self):
-        self.assertPoint('foo\nbar\nbaz\n\n', -1, 'p2e', reverse=False)
-        self.assertPoint('foo\nbar\nbaz\n\n', -3, 'p2{ba}1e', reverse=False)
+        self.assertPoint('foo\n\nbar\n\nbaz\n\n', -1, 'p2e', reverse=False)
+        self.assertPoint('foo\n\nbar\n\nbaz\n\n', -3, 'p2{ba}e', reverse=False)
 
     def test_beyond(self):
         citer = Citer()
@@ -137,7 +137,7 @@ class CiterTest(TestCase):
         Points with no paragraph specified look over the whole document.
         """
         self.assertIndex('foo bar', '{bar}', 4)
-        self.assertIndex('foo\nbar\nbaz', '{baz}', 8)
-        self.assertIndex('foo\nfoo\nfoo', '{foo}1e', 7)
+        self.assertIndex('foo\n\nbar\n\nbaz', '{baz}', 10)
+        self.assertIndex('foo\n\nfoo\n\nfoo', '{foo}1e', 8)
 
 
