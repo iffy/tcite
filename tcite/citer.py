@@ -2,9 +2,9 @@ import re
 from parsley import makeGrammar
 
 r_newline = re.compile(r'[\n\r]+')
+r_parabreak = re.compile(r'(\s*[\r\n]\s*[\r\n]\s*)', re.M | re.S)
 
-word_delim = ' \t'
-para_delim = '\r\n'
+word_delim = ' \t\r\n'
 
 grammar_str = '''
 digit = anything:x ?(x in '0123456789') -> x
@@ -70,22 +70,18 @@ class Citer(object):
         """
         return filter(None, [x.strip() for x in text.split()]) or ['']
 
-    def splitParagraphs(self, text, with_offsets=False):
-        lines = (x for x in text.replace('\r', '\n').split('\n'))
-        if with_offsets:
-            offset = 0
-            for line in lines:
-                leading, s, trailing = splitws(line)
-                offset += len(leading)
-                if s:
-                    yield s, offset
-                offset += len(trailing)
-                offset += 1 # for terminal \n
-        else:
-            for line in lines:
-                line = line.strip()
-                if line:
-                    yield line
+    def splitParagraphs(self, text):
+        """
+        Split text into paragraphs delimited by two or more lines of whitespace
+        """
+        broken = r_parabreak.split(text)
+        offset = 0
+        for chunk in broken:
+            isbreak = r_parabreak.match(chunk) is not None
+            if chunk and not isbreak:
+                yield chunk, offset
+            offset += len(chunk)
+
 
     def indexToPoint(self, text, index):
         """
@@ -94,54 +90,80 @@ class Citer(object):
         if abs(index) > len(text):
             raise IndexError(index, text)
 
+        if index < 0:
+            index = len(text) + index
+
         np = 0
         pattern = ''
         count = 0
         end = False
 
-        head = text[:index]
-        tail = text[index:]
+        i = 0
+        last_np = 0
+        last_p = ''
+        last_offset = 0
+        for p, offset in self.splitParagraphs(text):
+            if index < offset:
+                if last_p:
+                    # it was the last paragraph
+                    pass
+                else:
+                    # special case first paragraph
+                    last_p = p
+                    last_offset = offset
+                    last_np = i
+                break
+            last_p = p
+            last_offset = offset
+            last_np = i
+            i += 1
 
-        # count the leading paragraphs
-        paragraphs = list(self.splitParagraphs(head))
-        
+        p = last_p
+        offset = last_offset
+        np = last_np
 
-        if tail and tail[0] in para_delim:
+        if index >= (offset + len(p)):
             # end of paragraph
-            if paragraphs:
-                np = len(paragraphs) - 1
-                end = True
-        elif (head and head[-1] in para_delim) or not head.strip():
+            end = True
+        elif index < offset:
             # start of paragraph
-            np = len(paragraphs)
+            pass
         else:
-            # middle of paragraph
-            if paragraphs:
-                np = len(paragraphs) - 1
-
-            start_of_word = True
-            end_of_word = False
-            if head:
-                start_of_word = head[-1] in word_delim
-            if tail:
-                end_of_word = tail[0] in word_delim
-
-            if start_of_word and end_of_word:
-                stripped_head = head.rstrip()
-                ws_part = head[len(stripped_head):]
-                nonws_part = stripped_head.split()[-1]
-                pattern = nonws_part + ws_part
-                end = True
-            elif start_of_word:
-                pattern = tail.split()[0]
-                count = head.count(pattern)
+            # start/middle of paragraph
+            head = p[:index-offset]
+            if not head:
+                # start of paragraph
+                pass
             else:
-                pattern = head.split()[-1]
-                rest = head[:-len(pattern)]
-                count = rest.count(pattern)
-                end = True
+                # middle of paragraph
+                tail = p[index-offset:]
 
+
+                start_of_word = True
+                end_of_word = False
+                if head:
+                    start_of_word = head[-1] in word_delim
+                if tail:
+                    end_of_word = tail[0] in word_delim
+
+
+                if start_of_word and end_of_word:
+                    stripped_head = head.rstrip()
+                    ws_part = head[len(stripped_head):]
+                    nonws_part = stripped_head.split()[-1]
+                    pattern = nonws_part + ws_part
+                    end = True
+                elif start_of_word:
+                    pattern = tail.split()[0]
+                    count = head.count(pattern)
+                else:
+                    pattern = head.split()[-1]
+                    rest = head[:-len(pattern)]
+                    count = rest.count(pattern)
+                    end = True
+        
         return Point(np, pattern, count, end)
+
 
     def pointToIndex(self, text, point):
         """
@@ -159,7 +181,7 @@ class Citer(object):
         offset = 0
         if parsed.p is not None:
             # has paragraph designation
-            paragraphs = list(self.splitParagraphs(text, with_offsets=True))
+            paragraphs = list(self.splitParagraphs(text))
             p, offset = paragraphs[parsed.p]
         
         if parsed.pattern:

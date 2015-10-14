@@ -17,7 +17,7 @@ A Point is a single place in the text in between characters.  The format is like
 
     [p<paragraph_num>][{<string>}[<match_num>]][e]
 
-Paragraphs are determined by collapsing all newlines, carriage returns and whitespace into a single newline, stripping whitespace from the beginning and end of the document, and then splitting on newlines.
+Paragraphs breaks are two or more sequential lines of whitespace.  Leading and trailing whitespace in the document is discarded.
 
 ## Ranges
 
